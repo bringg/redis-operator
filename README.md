@@ -1,6 +1,6 @@
 # Redis Operator
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/bringg/redis-operator)](https://goreportcard.com/report/github.com/amaizfinance/redis-operator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bringg/redis-operator)](https://goreportcard.com/report/github.com/bringg/redis-operator)
 [![GolangCI](https://golangci.com/badges/github.com/bringg/redis-operator.svg)](https://golangci.com/r/github.com/bringg/redis-operator)
 [![LICENSE](https://img.shields.io/github/license/bringg/redis-operator.svg)](https://github.com/bringg/redis-operator/blob/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/bringg/redis-operator?status.svg)](https://godoc.org/github.com/bringg/redis-operator)

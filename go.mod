@@ -1,4 +1,4 @@
-module github.com/amaizfinance/redis-operator
+module github.com/bringg/redis-operator
 
 go 1.19
 

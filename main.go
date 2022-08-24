@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/amaizfinance/redis-operator/api/v1alpha1"
-	"github.com/amaizfinance/redis-operator/controllers"
+	"github.com/bringg/redis-operator/api/v1alpha1"
+	"github.com/bringg/redis-operator/controllers"
 )
 
 // Change below variables to serve metrics on different host or port.

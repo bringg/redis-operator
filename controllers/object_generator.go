@@ -32,8 +32,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	k8sv1alpha1 "github.com/amaizfinance/redis-operator/api/v1alpha1"
-	"github.com/amaizfinance/redis-operator/controllers/redis"
+	k8sv1alpha1 "github.com/bringg/redis-operator/api/v1alpha1"
+	"github.com/bringg/redis-operator/controllers/redis"
 )
 
 const (
