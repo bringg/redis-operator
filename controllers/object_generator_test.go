@@ -81,6 +81,9 @@ func Test_normalizeResourceRequirements(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("4096Mi"),
 			corev1.ResourceCPU:    resource.MustParse("1000m"),
 		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU: resource.MustParse("1.5"),
+		},
 	}
 
 	result := normalizeResourceRequirements(input)
@@ -94,6 +97,13 @@ func Test_normalizeResourceRequirements(t *testing.T) {
 	}
 	if !result.Limits[corev1.ResourceCPU].Equal(expectedCPU) {
 		t.Errorf("Expected CPU to be normalized to 1, got %v", result.Limits[corev1.ResourceCPU])
+	}
+
+	// Check that 1.5 CPU fraction becomes 1500m
+	expectedRequestCPU := resource.MustParse("1500m")
+
+	if !result.Requests[corev1.ResourceCPU].Equal(expectedRequestCPU) {
+		t.Errorf("Expected CPU request to be normalized to 1500m, got %v", result.Requests[corev1.ResourceCPU])
 	}
 }
 
