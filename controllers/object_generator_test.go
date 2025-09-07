@@ -15,7 +15,15 @@
 package controllers
 
 import (
+	"strings"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	k8sv1alpha1 "github.com/bringg/redis-operator/api/v1alpha1"
+	"github.com/bringg/redis-operator/controllers/redis"
 )
 
 func Test_mapsEqual(t *testing.T) {
@@ -64,5 +72,67 @@ func Test_isSubset(t *testing.T) {
 				t.Errorf("isSubset() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_normalizeResourceRequirements(t *testing.T) {
+	input := corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("4096Mi"),
+			corev1.ResourceCPU:    resource.MustParse("1000m"),
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU: resource.MustParse("1.5"),
+		},
+	}
+
+	result := normalizeResourceRequirements(input)
+
+	// Check that 4096Mi becomes 4Gi and 1000m becomes 1
+	expectedMemory := resource.MustParse("4Gi")
+	expectedCPU := resource.MustParse("1")
+
+	if !result.Limits[corev1.ResourceMemory].Equal(expectedMemory) {
+		t.Errorf("Expected memory to be normalized to 4Gi, got %v", result.Limits[corev1.ResourceMemory])
+	}
+	if !result.Limits[corev1.ResourceCPU].Equal(expectedCPU) {
+		t.Errorf("Expected CPU to be normalized to 1, got %v", result.Limits[corev1.ResourceCPU])
+	}
+
+	// Check that 1.5 CPU fraction becomes 1500m
+	expectedRequestCPU := resource.MustParse("1500m")
+
+	if !result.Requests[corev1.ResourceCPU].Equal(expectedRequestCPU) {
+		t.Errorf("Expected CPU request to be normalized to 1500m, got %v", result.Requests[corev1.ResourceCPU])
+	}
+}
+
+func Test_generateConfigMap_deterministicOrder(t *testing.T) {
+	redisInstance := &k8sv1alpha1.Redis{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-redis", Namespace: "default"},
+		Spec: k8sv1alpha1.RedisSpec{
+			Config: map[string]string{
+				"save":      "60 1000",
+				"maxmemory": "2gb",
+				"timeout":   "0",
+			},
+		},
+	}
+
+	master := redis.Address{Host: "192.168.1.100", Port: "6379"}
+
+	// Generate ConfigMap twice
+	configMap1 := generateConfigMap(redisInstance, master)
+	configMap2 := generateConfigMap(redisInstance, master)
+
+	// Should be identical (deterministic)
+	if configMap1.Data[configFileName] != configMap2.Data[configFileName] {
+		t.Error("ConfigMap generation is not deterministic")
+	}
+
+	// Check that keys are in sorted order
+	content := configMap1.Data[configFileName]
+	if !strings.Contains(content, "maxmemory 2gb\nsave 60 1000\ntimeout 0") {
+		t.Error("Config keys are not sorted alphabetically")
 	}
 }
