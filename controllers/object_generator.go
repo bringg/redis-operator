@@ -21,12 +21,14 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -172,10 +174,17 @@ func generateConfigMap(r *k8sv1alpha1.Redis, master redis.Address) *corev1.Confi
 		_, _ = fmt.Fprintf(&b, "include %s\n", secretMountPath)
 	}
 
-	for k, v := range r.Spec.Config {
+	// Sort config keys to ensure deterministic ConfigMap generation
+	var configKeys []string
+	for k := range r.Spec.Config {
 		if _, ok := excludedConfigDirectives[k]; !ok {
-			_, _ = fmt.Fprintf(&b, "%s %s\n", k, v)
+			configKeys = append(configKeys, k)
 		}
+	}
+	sort.Strings(configKeys)
+
+	for _, k := range configKeys {
+		_, _ = fmt.Fprintf(&b, "%s %s\n", k, r.Spec.Config[k])
 	}
 
 	if master != (redis.Address{}) {
@@ -275,7 +284,7 @@ func generateStatefulSet(r *k8sv1alpha1.Redis, password string) *appsv1.Stateful
 		Image:      r.Spec.Redis.Image,
 		Args:       []string{configMapMountPath},
 		WorkingDir: workingDir,
-		Resources:  r.Spec.Redis.Resources,
+		Resources:  normalizeResourceRequirements(r.Spec.Redis.Resources),
 		VolumeMounts: []corev1.VolumeMount{{
 			Name:      configMapMountName,
 			ReadOnly:  true,
@@ -360,7 +369,7 @@ func generateStatefulSet(r *k8sv1alpha1.Redis, password string) *appsv1.Stateful
 					},
 				},
 			}},
-			Resources:       r.Spec.Exporter.Resources,
+			Resources:       normalizeResourceRequirements(r.Spec.Exporter.Resources),
 			LivenessProbe:   &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/", Port: intstr.FromInt(exporterPort)}}},
 			ReadinessProbe:  &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/", Port: intstr.FromInt(exporterPort)}}},
 			SecurityContext: r.Spec.Exporter.SecurityContext,
@@ -437,10 +446,12 @@ func configMapUpdateNeeded(got, want *corev1.ConfigMap) (needed bool) {
 		got.SetLabels(want.GetLabels())
 		needed = true
 	}
+
 	if !strings.Contains(got.Data[configFileName], want.Data[configFileName]) {
 		got.Data = want.Data
 		needed = true
 	}
+
 	return
 }
 
@@ -544,4 +555,29 @@ func resourceRequirementsEqual(got, want []corev1.Container) bool {
 	}
 
 	return true
+}
+
+// normalizeResourceRequirements normalizes resource quantities to their canonical form
+// This prevents issues where Kubernetes normalizes "4096Mi" to "4Gi" causing infinite reconciliation loops
+func normalizeResourceRequirements(resources corev1.ResourceRequirements) corev1.ResourceRequirements {
+	normalized := resources.DeepCopy()
+
+	if normalized.Limits != nil {
+		normalizeResourceList(normalized.Limits)
+	}
+	if normalized.Requests != nil {
+		normalizeResourceList(normalized.Requests)
+	}
+
+	return *normalized
+}
+
+// normalizeResourceList normalizes all quantities in a ResourceList to their canonical form
+func normalizeResourceList(resourceList corev1.ResourceList) {
+	for key, qty := range resourceList {
+		// Parse and re-format to get canonical form that Kubernetes uses
+		if parsed, err := resource.ParseQuantity(qty.String()); err == nil {
+			resourceList[key] = parsed
+		}
+	}
 }

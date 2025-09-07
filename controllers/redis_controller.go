@@ -137,7 +137,7 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, request ctrl.Request) (
 		if result, err := r.createOrUpdate(ctx, object, redisObject, options); err != nil {
 			return ctrl.Result{}, err
 		} else if result.Requeue {
-			logger.Info(fmt.Sprintf("Applied %T", object))
+			logger.Info("Object updated, requeuing for next reconciliation", "redisName", redisObject.GetName(), "objectType", fmt.Sprintf("%T", object))
 			return result, nil
 		}
 	}
@@ -190,6 +190,7 @@ podIter:
 	exponentialBackOff := backoff.NewExponentialBackOff()
 	exponentialBackOff.MaxElapsedTime = redis.DefaultFailoverTimeout
 
+	loggerDebug("Starting master discovery process", "redisName", redisObject.GetName())
 	if err := backoff.Retry(func() error {
 		if err := replication.Refresh(); err != nil {
 			return err
