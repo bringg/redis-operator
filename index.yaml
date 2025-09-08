@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   redis-operator:
   - apiVersion: v2
+    appVersion: v0.4.0
+    created: "2025-09-08T14:13:01.905343634Z"
+    description: A Helm chart for Redis Operator
+    digest: 0ad8210ea111a0199536e9ee111583589a90349034dbd590d1d24b3c427986b2
+    name: redis-operator
+    type: application
+    urls:
+    - https://github.com/bringg/redis-operator/releases/download/redis-operator-0.4.0/redis-operator-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
     appVersion: v0.3.0
     created: "2022-09-18T12:49:32.888247118Z"
     description: A Helm chart for Redis Operator
@@ -31,4 +41,4 @@ entries:
     urls:
     - https://github.com/bringg/redis-operator/releases/download/redis-operator-0.3.0/redis-operator-0.3.0.tgz
     version: 0.3.0
-generated: "2022-09-18T12:49:32.88826622Z"
+generated: "2025-09-08T14:13:01.905365456Z"
